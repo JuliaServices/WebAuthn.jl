@@ -54,3 +54,5 @@ The building blocks are public too: `WebAuthn.client_data`,
 `WebAuthn.authenticator_data` (with `user_present`, `user_verified`,
 `backup_eligible`, `backed_up`), `WebAuthn.public_key_matches`, and
 `WebAuthn.signature_valid`.
+
+The package compiles with `juliac --trim=safe`; CI builds and runs `test/trim/main.jl` to keep it that way.

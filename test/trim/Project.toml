@@ -1,0 +1,5 @@
+[deps]
+WebAuthn = "f3bae005-4070-49dc-a027-ffaea948cc94"
+
+[sources]
+WebAuthn = {path = "../.."}

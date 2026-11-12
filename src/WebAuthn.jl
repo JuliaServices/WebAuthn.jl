@@ -193,7 +193,7 @@ function signature_valid(public_key::AbstractVector{UInt8}, message::AbstractVec
 end
 
 _expected(expected::AbstractString, value::String) = value == expected
-_expected(expected, value::String) = expected(value)::Bool
+_expected(expected::F, value::String) where {F} = expected(value)::Bool
 
 function _constant_time_equal(a::Vector{UInt8}, b::Vector{UInt8})
     length(a) == length(b) || return false
@@ -205,8 +205,11 @@ function _constant_time_equal(a::Vector{UInt8}, b::Vector{UInt8})
 end
 
 # The checks both ceremonies share, in the order the specification lists them.
+# `O` and `C` make Julia specialize on the `origin` and `challenge` functions it
+# only passes along, which `juliac --trim` needs to resolve the calls.
 function _verify_common(client_data_json, authenticator_data_bytes, ceremony::String,
-                        rp_id::AbstractString, origin, challenge, require_user_verification::Bool)
+                        rp_id::AbstractString, origin::O, challenge::C,
+                        require_user_verification::Bool) where {O,C}
     client = client_data(client_data_json)
     client.type == ceremony || throw(VerificationError("The passkey response is for a different step"))
     _expected(challenge, client.challenge) ||
@@ -238,9 +241,9 @@ the response's value and returns whether it is acceptable. A challenge function
 is the place to look up and consume a stored challenge, so each works once.
 """
 function verify_registration(client_data_json::AbstractVector{UInt8}, authenticator_data::AbstractVector{UInt8};
-                             rp_id::AbstractString, origin, challenge,
+                             rp_id::AbstractString, origin::O, challenge::C,
                              credential_id::AbstractVector{UInt8}, public_key::AbstractVector{UInt8},
-                             algorithm::Integer, require_user_verification::Bool = false)
+                             algorithm::Integer, require_user_verification::Bool = false) where {O,C}
     data = _verify_common(client_data_json, authenticator_data, "webauthn.create",
                           rp_id, origin, challenge, require_user_verification)
     !isempty(data.credential_id) && data.credential_id == credential_id ||
@@ -266,8 +269,8 @@ was saved: a device-bound credential's `sign_count` must grow past the saved one
 device.
 """
 function verify_authentication(client_data_json::AbstractVector{UInt8}, authenticator_data::AbstractVector{UInt8},
-                               signature::AbstractVector{UInt8}; rp_id::AbstractString, origin, challenge,
-                               public_key::AbstractVector{UInt8}, require_user_verification::Bool = false)
+                               signature::AbstractVector{UInt8}; rp_id::AbstractString, origin::O, challenge::C,
+                               public_key::AbstractVector{UInt8}, require_user_verification::Bool = false) where {O,C}
     data = _verify_common(client_data_json, authenticator_data, "webauthn.get",
                           rp_id, origin, challenge, require_user_verification)
     message = vcat(Vector{UInt8}(authenticator_data), sha256(Vector{UInt8}(client_data_json)))

@@ -28,3 +28,18 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+  trim:
+    name: juliac --trim=safe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Compile and run test/trim/main.jl
+        run: |
+          julia --project=test/trim -e 'using Pkg; Pkg.instantiate()'
+          julia --project=@juliac -e 'using Pkg; Pkg.add("JuliaC")'
+          julia --project=@juliac -e 'using JuliaC; JuliaC.main(["--output-exe", "watrim", "--bundle", "build", "--project", "test/trim", "--trim=safe", "--experimental", "test/trim/main.jl"])'
+          ./build/bin/watrim
