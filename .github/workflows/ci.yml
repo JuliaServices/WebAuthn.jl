@@ -18,7 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['1', 'min', 'pre']
+        # '1.10' is the [compat] floor; 1.10.0 itself no longer starts on GitHub's Ubuntu image.
+        version: ['1', '1.10', 'pre']
         os: [ubuntu-latest, windows-latest, macOS-latest]
     steps:
       - uses: actions/checkout@v4
