@@ -237,8 +237,10 @@ public key and COSE algorithm from `getPublicKey()` and
 `sign_count` and [`backup_eligible`](@ref) with the key.
 
 `origin` and `challenge` each take the expected string, or a function that gets
-the response's value and returns whether it is acceptable. A challenge function
-is the place to look up and consume a stored challenge, so each works once.
+the response's value and returns whether it is acceptable. The challenge string
+is base64url without `=` padding, the form `clientDataJSON` carries. A challenge
+function is the place to look up and consume a stored challenge, so each works
+once. Responses made in a cross-origin iframe are rejected.
 """
 function verify_registration(client_data_json::AbstractVector{UInt8}, authenticator_data::AbstractVector{UInt8};
                              rp_id::AbstractString, origin::O, challenge::C,

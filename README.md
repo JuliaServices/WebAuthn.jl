@@ -16,6 +16,10 @@ Decode the base64url fields the browser sends, then check them. Every failed
 check throws a `WebAuthn.VerificationError` whose message you can show the person
 signing in.
 
+In the options for `navigator.credentials.create()`, list only ES256 (`-7`) and
+RS256 (`-257`) in `pubKeyCredParams`. Registration rejects any other key type, so
+a security key that picks Ed25519 (`-8`) could not register.
+
 Registration (`navigator.credentials.create()`):
 
 ```julia
@@ -29,10 +33,15 @@ data = WebAuthn.verify_registration(client_data_json, authenticator_data;
     public_key = public_key_der,         # response.getPublicKey()
     algorithm = public_key_algorithm)    # response.getPublicKeyAlgorithm(): WebAuthn.ES256 or WebAuthn.RS256
 
+# Refuse a credential ID that is already saved, for any account.
+credential_exists(raw_id) && error("passkey already registered")
 save(raw_id, public_key_der, data.sign_count, WebAuthn.backup_eligible(data))
 ```
 
-Authentication (`navigator.credentials.get()`), with the public key saved above:
+Authentication (`navigator.credentials.get()`) starts by finding the saved
+credential by the response's `rawId`. If you knew who was signing in before the
+ceremony, check that the credential belongs to that account. Otherwise, find the
+account from `response.userHandle` and check that the credential is one of its own.
 
 ```julia
 data = WebAuthn.verify_authentication(client_data_json, authenticator_data, signature;
@@ -44,11 +53,18 @@ data = WebAuthn.verify_authentication(client_data_json, authenticator_data, sign
 # Device-bound credentials must count up; synced passkeys may report 0.
 saved.backup_eligible || data.sign_count > saved.sign_count ||
     data.sign_count == 0 == saved.sign_count || error("possible cloned authenticator")
+save_sign_count(saved, data.sign_count)
 ```
 
 `origin` and `challenge` each take the expected string, or a function that gets the
-response's value and returns whether it is acceptable. A challenge function is the
-place to look up and delete a stored challenge, so each challenge works once.
+response's value and returns whether it is acceptable. The challenge string is the
+base64url text of the challenge bytes without `=` padding, the form
+`clientDataJSON` carries. Standard Base64 or padded text never matches. A challenge
+function is the place to look up and delete a stored challenge, so each challenge
+works once.
+
+Responses from a page in a cross-origin iframe (`"crossOrigin":true` in
+`clientDataJSON`) are rejected.
 
 The building blocks are public too: `WebAuthn.client_data`,
 `WebAuthn.authenticator_data` (with `user_present`, `user_verified`,

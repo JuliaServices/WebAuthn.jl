@@ -65,6 +65,7 @@ end
         @test_throws WebAuthn.VerificationError("The passkey's public key doesn't match its kind") reg(; key = ec384.der)
         @test_throws WebAuthn.VerificationError("The passkey's public key doesn't match its kind") reg(; key = rsa1024.der, algorithm = WebAuthn.RS256)
         @test_throws WebAuthn.VerificationError("The passkey's public key doesn't match its kind") reg(; key = UInt8[1, 2, 3])
+        @test_throws WebAuthn.VerificationError("The passkey's public key doesn't match its kind") reg(; algorithm = -8)  # EdDSA
         @test_throws WebAuthn.VerificationError("The passkey response is for a different step") reg(; json = client_json("webauthn.get"))
         @test_throws WebAuthn.VerificationError("The passkey response has a bad credential ID") reg(; data = auth_data(; flags = 0x45, credential_id)[1:60])
     end
@@ -86,6 +87,8 @@ end
         @test seen == ["chal"]
         @test_throws WebAuthn.VerificationError("The passkey request expired or was already used. Try again.") auth(; challenge = c -> false)
         @test_throws WebAuthn.VerificationError("The passkey request expired or was already used. Try again.") auth(; challenge = "other")
+        # The challenge is compared as text, so a padded copy of the expected one does not match.
+        @test_throws WebAuthn.VerificationError("The passkey request expired or was already used. Try again.") auth(; json = client_json("webauthn.get"; challenge = "chal="))
 
         @test_throws WebAuthn.VerificationError("The passkey response came from another website") auth(; origin = "https://evil.example")
         @test_throws WebAuthn.VerificationError("The passkey response came from another website") auth(; json = client_json("webauthn.get"; extra = ",\"crossOrigin\":true"))
